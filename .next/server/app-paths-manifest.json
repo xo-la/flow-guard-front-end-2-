@@ -1,0 +1,8 @@
+{
+  "/camera-management/page": "app/camera-management/page.js",
+  "/detection-logs/page": "app/detection-logs/page.js",
+  "/incident-reports/page": "app/incident-reports/page.js",
+  "/user-permissions/page": "app/user-permissions/page.js",
+  "/login/page": "app/login/page.js",
+  "/system-settings/page": "app/system-settings/page.js"
+}
