@@ -1,9 +1,8 @@
 "use client"; // Required to check the active web address link dynamically
 
-import type { Metadata } from "next";
 import { usePathname } from "next/navigation"; // Hook to see what page we are on
 import "./globals.css";
-import Sidebar from "@/components/Sidebar";
+import Sidebar from "../components/Sidebar";
 
 export default function RootLayout({
   children,
