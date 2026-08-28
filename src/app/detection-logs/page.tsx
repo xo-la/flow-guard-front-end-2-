@@ -12,6 +12,33 @@ interface LogEntry {
   confidence: number;
 }
 
+const demoLogs: LogEntry[] = [
+  {
+    id: "DL-101",
+    timestamp: "2026-08-28 08:14:22",
+    cameraName: "Camera 01 - Facility Zone",
+    eventType: "Human Detected",
+    objectDetected: "Person",
+    confidence: 0.96,
+  },
+  {
+    id: "DL-102",
+    timestamp: "2026-08-28 08:18:05",
+    cameraName: "Camera 07 - West Gate",
+    eventType: "Vehicle",
+    objectDetected: "Truck",
+    confidence: 0.91,
+  },
+  {
+    id: "DL-103",
+    timestamp: "2026-08-28 08:25:41",
+    cameraName: "Camera 15 - Loading Dock",
+    eventType: "Smoke",
+    objectDetected: "Smoke plume",
+    confidence: 0.89,
+  },
+];
+
 export default function DetectionLogsPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -24,26 +51,32 @@ export default function DetectionLogsPage() {
   const [search, setSearch] = useState("");
   const [selectedType, setSelectedType] = useState("All");
 
-  // Fetch telemetry sequences from FastAPI connection pipeline
   useEffect(() => {
     async function fetchBackendLogs() {
       try {
         setLoading(true);
-        // Calls the FastAPI endpoint on port 8000
-        const response = await fetch(`http://localhost:8000/api/logs?event_type=${selectedType}`);
+        const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL;
+
+        if (!apiBaseUrl) {
+          setLogs(demoLogs);
+          return;
+        }
+
+        const response = await fetch(`${apiBaseUrl}/api/logs?event_type=${selectedType}`);
         if (!response.ok) throw new Error("Network response error matrix failure");
 
         const data = await response.json();
-        setLogs(data);
+        setLogs(Array.isArray(data) && data.length > 0 ? data : demoLogs);
       } catch (error) {
-        console.error("Failed pulling core logs from FastAPI:", error);
+        console.error("Failed pulling core logs from API:", error);
+        setLogs(demoLogs);
       } finally {
         setLoading(false);
       }
     }
 
     fetchBackendLogs();
-  }, [selectedType]); // Re-runs instantly whenever dropdown selection changes!
+  }, [selectedType]);
 
   const filteredLogs = useMemo(() => {
     return logs.filter((log) => {

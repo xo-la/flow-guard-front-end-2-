@@ -6,7 +6,6 @@ export default function SystemSettingsPage() {
   // Section 1 State: AI Thresholds Calibration parameters
   const [confidence, setConfidence] = useState<number>(85);
   const [sensitivity, setSensitivity] = useState<number>(70);
-  const [falsePositive, setFalsePositive] = useState<number>(0);
 
   // Section 2 State: Live Dynamic IP Camera Provision Configuration
   const [cameraName, setCameraName] = useState("Main Security Node 01");
@@ -14,7 +13,6 @@ export default function SystemSettingsPage() {
   const [syncStatus, setSyncStatus] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Submits the new camera address targeting specs to Python FastAPI engine
   const handleUpdateCameraNode = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!rtspUrl) {
@@ -25,8 +23,16 @@ export default function SystemSettingsPage() {
     setLoading(true);
     setSyncStatus("");
 
+    const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL;
+
+    if (!apiBaseUrl) {
+      setSyncStatus("✅ Demo mode active: set NEXT_PUBLIC_API_URL in Vercel to connect to your real backend.");
+      setLoading(false);
+      return;
+    }
+
     try {
-      const response = await fetch("http://localhost:8000/api/camera/configure", {
+      const response = await fetch(`${apiBaseUrl}/api/camera/configure`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -43,7 +49,7 @@ export default function SystemSettingsPage() {
         setSyncStatus(`❌ Network Sync Refused: ${data.detail || "Unknown hardware rejection."}`);
       }
     } catch (error) {
-      setSyncStatus("❌ Server Gateway Interface Error: Cannot connect to FastAPI kernel.");
+      setSyncStatus("❌ Server Gateway Interface Error: Cannot connect to the configured backend.");
     } finally {
       setLoading(false);
     }

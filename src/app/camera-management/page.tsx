@@ -9,19 +9,45 @@ interface Camera {
   status: "Online" | "Offline";
 }
 
+const getCameraPreview = (camera: Camera) => {
+  const accent = camera.status === "Online" ? "#00A3FF" : "#3f3f46";
+  const glow = camera.status === "Online" ? "#6ee7ff" : "#a1a1aa";
+  const label = camera.id === "15" ? "LOADING DOCK" : `ZONE ${camera.id}`;
+
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="800" height="500" viewBox="0 0 800 500">
+      <defs>
+        <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+          <stop offset="0%" stop-color="#0d0d0d"/>
+          <stop offset="100%" stop-color="#101827"/>
+        </linearGradient>
+      </defs>
+      <rect width="800" height="500" fill="url(#bg)"/>
+      <rect x="40" y="40" width="720" height="420" rx="18" fill="rgba(15,23,42,0.7)" stroke="${accent}" stroke-width="2"/>
+      <path d="M80 350 L220 200 L320 270 L440 170 L560 260 L720 120" stroke="${glow}" stroke-width="6" fill="none" opacity="0.8"/>
+      <circle cx="220" cy="200" r="14" fill="${accent}" opacity="0.8"/>
+      <circle cx="440" cy="170" r="14" fill="${accent}" opacity="0.8"/>
+      <circle cx="560" cy="260" r="14" fill="${accent}" opacity="0.8"/>
+      <rect x="90" y="90" width="170" height="28" rx="8" fill="rgba(15,23,42,0.8)"/>
+      <text x="110" y="110" fill="${glow}" font-family="Arial, sans-serif" font-size="16" font-weight="700">${label}</text>
+      <text x="90" y="420" fill="#e5e7eb" font-family="Arial, sans-serif" font-size="32" font-weight="700">${camera.status.toUpperCase()}</text>
+    </svg>
+  `;
+
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+};
+
 export default function CameraManagementPage() {
   const router = useRouter();
   const [filter, setFilter] = useState<"All" | "Online" | "Offline">("All");
   const [cameras, setCameras] = useState<Camera[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [streamTimestamp, setStreamTimestamp] = useState<number>(Date.now());
 
   useEffect(() => {
     const fetchCameras = async () => {
       try {
         setIsLoading(true);
 
-        // Simulating the layout blueprint specs (16 cameras: 14 online, 2 offline)
         const mockGeneratedGrid: Camera[] = Array.from({ length: 16 }, (_, i) => {
           const idNum = i + 1;
           const isOffline = idNum === 3 || idNum === 15;
@@ -41,10 +67,6 @@ export default function CameraManagementPage() {
     };
 
     fetchCameras();
-
-    // Force periodic cache breaking string generation every 10 seconds for video sources
-    const interval = setInterval(() => setStreamTimestamp(Date.now()), 10000);
-    return () => clearInterval(interval);
   }, []);
 
   const filteredCameras = cameras.filter(
@@ -121,17 +143,10 @@ export default function CameraManagementPage() {
                 <div className="w-full h-32 bg-black rounded-md flex items-center justify-center border border-neutral-800 overflow-hidden relative">
                   {camera.status === "Online" ? (
                     <img
-                      src={`http://localhost:8000/api/camera/stream?node=${camera.id}&t=${streamTimestamp}`}
+                      src={getCameraPreview(camera)}
                       alt={`${camera.name} Live Stream`}
                       className="w-full h-full object-cover"
                       loading="lazy"
-                      onError={(e) => {
-                        // Safe fallback layout if FastAPI crashes or resets network buffers
-                        e.currentTarget.style.display = 'none';
-                        if (e.currentTarget.nextSibling) {
-                          (e.currentTarget.nextSibling as HTMLElement).style.display = 'flex';
-                        }
-                      }}
                     />
                   ) : null}
 
