@@ -1,5 +1,5 @@
-export const dynamic = "force-dynamic"; // Ensures the page is always rendered on the server for real-time data 
 "use client";
+export const dynamic = "force-dynamic"; // Ensures the page is always rendered on the server for real-time data 
 
 import { useState, useEffect, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
