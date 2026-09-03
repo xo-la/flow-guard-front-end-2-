@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import RTSPPlayer from "../../components/RTSPPlayer";
 
 interface Camera {
   id: string;
@@ -142,12 +143,16 @@ export default function CameraManagementPage() {
                 {/* UPGRADED: LIVE INTERACTIVE STREAM VIDEO THUMBNAIL CANVAS */}
                 <div className="w-full h-32 bg-black rounded-md flex items-center justify-center border border-neutral-800 overflow-hidden relative">
                   {camera.status === "Online" ? (
-                    <img
-                      src={getCameraPreview(camera)}
-                      alt={`${camera.name} Live Stream`}
-                      className="w-full h-full object-cover"
-                      loading="lazy"
-                    />
+                    camera.id === "15" ? (
+                      <RTSPPlayer source={process.env.NEXT_PUBLIC_RTSP_URL || 'rtsp://admin:TZBWFG@192.158.0.5:534/h364_stream'} className="w-full h-full object-cover" />
+                    ) : (
+                      <img
+                        src={getCameraPreview(camera)}
+                        alt={`${camera.name} Live Stream`}
+                        className="w-full h-full object-cover"
+                        loading="lazy"
+                      />
+                    )
                   ) : null}
 
                   {/* Fallback layout interface overlay shown on offline items or failed handshakes */}
