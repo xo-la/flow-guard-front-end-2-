@@ -2,41 +2,14 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import RTSPPlayer from "../../components/RTSPPlayer";
+import { API_BASE_URL } from "../../config/api";
 
 interface Camera {
   id: string;
   name: string;
+  rtsp_url?: string;
   status: "Online" | "Offline";
 }
-
-const getCameraPreview = (camera: Camera) => {
-  const accent = camera.status === "Online" ? "#00A3FF" : "#3f3f46";
-  const glow = camera.status === "Online" ? "#6ee7ff" : "#a1a1aa";
-  const label = camera.id === "15" ? "LOADING DOCK" : `ZONE ${camera.id}`;
-
-  const svg = `
-    <svg xmlns="http://www.w3.org/2000/svg" width="800" height="500" viewBox="0 0 800 500">
-      <defs>
-        <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
-          <stop offset="0%" stop-color="#0d0d0d"/>
-          <stop offset="100%" stop-color="#101827"/>
-        </linearGradient>
-      </defs>
-      <rect width="800" height="500" fill="url(#bg)"/>
-      <rect x="40" y="40" width="720" height="420" rx="18" fill="rgba(15,23,42,0.7)" stroke="${accent}" stroke-width="2"/>
-      <path d="M80 350 L220 200 L320 270 L440 170 L560 260 L720 120" stroke="${glow}" stroke-width="6" fill="none" opacity="0.8"/>
-      <circle cx="220" cy="200" r="14" fill="${accent}" opacity="0.8"/>
-      <circle cx="440" cy="170" r="14" fill="${accent}" opacity="0.8"/>
-      <circle cx="560" cy="260" r="14" fill="${accent}" opacity="0.8"/>
-      <rect x="90" y="90" width="170" height="28" rx="8" fill="rgba(15,23,42,0.8)"/>
-      <text x="110" y="110" fill="${glow}" font-family="Arial, sans-serif" font-size="16" font-weight="700">${label}</text>
-      <text x="90" y="420" fill="#e5e7eb" font-family="Arial, sans-serif" font-size="32" font-weight="700">${camera.status.toUpperCase()}</text>
-    </svg>
-  `;
-
-  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
-};
 
 export default function CameraManagementPage() {
   const router = useRouter();
@@ -44,38 +17,87 @@ export default function CameraManagementPage() {
   const [cameras, setCameras] = useState<Camera[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
+  // Modal State Controls
+  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+  const [newCameraName, setNewCameraName] = useState<string>("");
+  const [newRtspUrl, setNewRtspUrl] = useState<string>("");
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+
+  // 1. Fetch real cameras from your Render FastAPI backend on mount
+  const fetchCameras = async () => {
+    try {
+      setIsLoading(true);
+      const response = await fetch(`${API_BASE_URL}/api/cameras`);
+      if (!response.ok) throw new Error("Failed to fetch cameras from backend");
+      
+      const data = await response.json();
+      const formattedCameras: Camera[] = data.map((cam: any) => ({
+        id: cam.id,
+        name: cam.name,
+        rtsp_url: cam.rtsp_url,
+        status: cam.status || "Online",
+      }));
+
+      setCameras(formattedCameras);
+    } catch (error) {
+      console.error("Failed capturing hardware feed details:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchCameras = async () => {
-      try {
-        setIsLoading(true);
-
-        const mockGeneratedGrid: Camera[] = Array.from({ length: 16 }, (_, i) => {
-          const idNum = i + 1;
-          const isOffline = idNum === 3 || idNum === 15;
-          return {
-            id: idNum < 10 ? `0${idNum}` : `${idNum}`,
-            name: idNum === 15 ? "Camera 15 - Loading Dock" : `Camera ${idNum < 10 ? '0' + idNum : idNum} - Facility Zone`,
-            status: isOffline ? "Offline" : "Online",
-          };
-        });
-
-        setCameras(mockGeneratedGrid);
-      } catch (error) {
-        console.error("Failed capturing hardware feed details:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     fetchCameras();
   }, []);
+
+  // 2. Handle POST request to add a new camera
+  const handleAddCameraSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCameraName || !newRtspUrl) return;
+
+    try {
+      setIsSubmitting(true);
+      const response = await fetch(`${API_BASE_URL}/api/cameras/add`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: newCameraName,
+          rtsp_url: newRtspUrl,
+        }),
+      });
+
+      const data = await response.json();
+      if (response.ok && data.status === "SUCCESS") {
+        // Append new camera to state grid immediately
+        setCameras((prev) => [
+          ...prev,
+          {
+            id: data.camera.id,
+            name: data.camera.name,
+            rtsp_url: data.camera.rtsp_url,
+            status: data.camera.status || "Online",
+          },
+        ]);
+        // Reset form & close modal
+        setNewCameraName("");
+        setNewRtspUrl("");
+        setIsModalOpen(false);
+      } else {
+        alert("Failed to add camera. Check console for details.");
+      }
+    } catch (error) {
+      console.error("Error posting new camera:", error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const filteredCameras = cameras.filter(
     (cam) => filter === "All" || cam.status === filter
   );
 
   return (
-    <div className="space-y-8 animate-fadeIn text-white">
+    <div className="space-y-8 animate-fadeIn text-white relative">
       {/* Title Header Section */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-neutral-800 pb-6">
         <div>
@@ -87,7 +109,10 @@ export default function CameraManagementPage() {
 
         {/* Central Context Action Panel Buttons */}
         <div className="flex items-center gap-3">
-          <button className="px-4 py-2 bg-[#00A3FF] hover:bg-blue-600 text-black font-semibold text-sm rounded transition-colors shadow-lg shadow-[#00A3FF]/10">
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="px-4 py-2 bg-[#00A3FF] hover:bg-blue-600 text-black font-semibold text-sm rounded transition-colors shadow-lg shadow-[#00A3FF]/10 cursor-pointer"
+          >
             + Add Camera
           </button>
           <button className="px-4 py-2 bg-neutral-800 hover:bg-neutral-700 text-white font-medium text-sm rounded border border-neutral-700 transition-colors">
@@ -106,10 +131,11 @@ export default function CameraManagementPage() {
             <button
               key={type}
               onClick={() => setFilter(type)}
-              className={`px-3 py-1.5 text-xs font-medium rounded transition-all ${filter === type
-                ? "bg-[#00A3FF] text-black font-semibold shadow"
-                : "text-neutral-400 hover:text-white"
-                }`}
+              className={`px-3 py-1.5 text-xs font-medium rounded transition-all ${
+                filter === type
+                  ? "bg-[#00A3FF] text-black font-semibold shadow"
+                  : "text-neutral-400 hover:text-white"
+              }`}
             >
               {type}
             </button>
@@ -120,12 +146,12 @@ export default function CameraManagementPage() {
       {/* Grid Canvas Panel Container */}
       {isLoading ? (
         <div className="h-64 flex items-center justify-center text-neutral-500 text-sm font-mono tracking-wider animate-pulse">
-          Loading surveillance feed map configurations...
+          Loading surveillance feed map configurations from Render backend...
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
           {filteredCameras.map((camera) => {
-            const isSpecialTarget = camera.id === "15";
+            const isSpecialTarget = camera.id === "01" || camera.id === "15";
 
             return (
               <div
@@ -135,34 +161,30 @@ export default function CameraManagementPage() {
                     router.push(`/detection-logs?camera=${encodeURIComponent(camera.name)}`);
                   }
                 }}
-                className={`bg-[#242424] border rounded-xl p-4 flex flex-col justify-between h-52 cursor-pointer transition-all hover:scale-[1.02] relative group ${isSpecialTarget
-                  ? "border-[#00A3FF] ring-2 ring-[#00A3FF]/30 shadow-lg shadow-[#00A3FF]/5"
-                  : "border-neutral-800 hover:border-neutral-700"
-                  }`}
+                className={`bg-[#242424] border rounded-xl p-4 flex flex-col justify-between h-52 cursor-pointer transition-all hover:scale-[1.02] relative group ${
+                  isSpecialTarget
+                    ? "border-[#00A3FF] ring-2 ring-[#00A3FF]/30 shadow-lg shadow-[#00A3FF]/5"
+                    : "border-neutral-800 hover:border-neutral-700"
+                }`}
               >
-                {/* UPGRADED: LIVE INTERACTIVE STREAM VIDEO THUMBNAIL CANVAS */}
+                {/* LIVE MJPEG STREAM VIDEO THUMBNAIL CANVAS */}
                 <div className="w-full h-32 bg-black rounded-md flex items-center justify-center border border-neutral-800 overflow-hidden relative">
                   {camera.status === "Online" ? (
-                    camera.id === "15" ? (
-                      <RTSPPlayer source={process.env.NEXT_PUBLIC_RTSP_URL || 'rtsp://admin:TZBWFG@192.158.0.5:534/h364_stream'} className="w-full h-full object-cover" />
-                    ) : (
-                      <img
-                        src={getCameraPreview(camera)}
-                        alt={`${camera.name} Live Stream`}
-                        className="w-full h-full object-cover"
-                        loading="lazy"
-                      />
-                    )
+                    <img
+                      src={`${API_BASE_URL}/api/camera/stream/${camera.id}`}
+                      alt={`${camera.name} Live Stream`}
+                      className="w-full h-full object-cover"
+                    />
                   ) : null}
 
-                  {/* Fallback layout interface overlay shown on offline items or failed handshakes */}
+                  {/* Fallback layout interface overlay shown on offline items */}
                   <div
                     className="absolute inset-0 flex flex-col items-center justify-center bg-neutral-900 text-neutral-600 space-y-1"
                     style={{ display: camera.status === "Offline" ? "flex" : "none" }}
                   >
                     <span className="text-xl">⚠️</span>
                     <span className="text-[10px] font-mono tracking-wider uppercase text-neutral-500">
-                      {camera.status === "Offline" ? "NODE OFFLINE" : "BUFFERING ERROR"}
+                      NODE OFFLINE
                     </span>
                   </div>
                 </div>
@@ -173,7 +195,6 @@ export default function CameraManagementPage() {
                     {camera.name}
                   </span>
 
-                  {/* Strict Operational Status Dot Asset Render Rules */}
                   {camera.status === "Online" ? (
                     <div className="flex items-center gap-1.5 shrink-0 bg-emerald-950/40 px-2 py-0.5 rounded-full border border-emerald-500/20">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -189,6 +210,70 @@ export default function CameraManagementPage() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* --- ADD CAMERA MODAL POPUP --- */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-6 w-full max-w-md shadow-2xl space-y-6">
+            <div className="flex justify-between items-center border-b border-neutral-800 pb-4">
+              <h3 className="text-lg font-bold text-white">Add New Camera Stream</h3>
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="text-neutral-400 hover:text-white text-xl font-bold"
+              >
+                &times;
+              </button>
+            </div>
+
+            <form onSubmit={handleAddCameraSubmit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-1">
+                  Camera Name / Designation
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Camera 04 - Perimeter North"
+                  value={newCameraName}
+                  onChange={(e) => setNewCameraName(e.target.value)}
+                  required
+                  className="w-full bg-neutral-950 border border-neutral-800 rounded px-3 py-2 text-white focus:outline-none focus:border-[#00A3FF]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-1">
+                  RTSP URL or Local Index
+                </label>
+                <input
+                  type="text"
+                  placeholder="rtsp://admin:pass@ip:554/stream or 0"
+                  value={newRtspUrl}
+                  onChange={(e) => setNewRtspUrl(e.target.value)}
+                  required
+                  className="w-full bg-neutral-950 border border-neutral-800 rounded px-3 py-2 text-white focus:outline-none focus:border-[#00A3FF]"
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 border-t border-neutral-800">
+                <button
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  className="px-4 py-2 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-sm font-medium rounded transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="px-4 py-2 bg-[#00A3FF] hover:bg-blue-600 text-black text-sm font-semibold rounded transition-colors shadow disabled:opacity-50"
+                >
+                  {isSubmitting ? "Adding Node..." : "Save Camera"}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>
