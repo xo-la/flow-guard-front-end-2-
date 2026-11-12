@@ -1,11 +1,9 @@
 "use client";
 
-
 // FORCE DYNAMIC RENDERING TO PREVENT BUILD ERRORS
 export const dynamic = "force-dynamic";
 
 import { useState, useEffect } from "react";
-// ... rest of your component code
 
 export default function SystemSettingsPage() {
   // Section 1 State: AI Thresholds Calibration parameters
@@ -37,11 +35,12 @@ export default function SystemSettingsPage() {
     }
 
     try {
-      const response = await fetch(`${apiBaseUrl}/api/camera/configure`, {
+      // CORRECTION: Updated endpoint path to /api/cameras/add and payload key to 'name' to match backend
+      const response = await fetch(`${apiBaseUrl}/api/cameras/add`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          camera_name: cameraName,
+          name: cameraName,
           rtsp_url: rtspUrl,
         }),
       });
@@ -49,7 +48,7 @@ export default function SystemSettingsPage() {
       const data = await response.json();
 
       if (response.ok) {
-        setSyncStatus(`✅ Node Connected: ${data.message || "Pipeline successfully updated."}`);
+        setSyncStatus(`✅ Node Connected: Pipeline successfully registered for ${data.camera?.name || cameraName}.`);
       } else {
         setSyncStatus(`❌ Network Sync Refused: ${data.detail || "Unknown hardware rejection."}`);
       }
