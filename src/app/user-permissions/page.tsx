@@ -5,8 +5,6 @@ export const dynamic = "force-dynamic";
 
 import { useState, useEffect } from "react";
 // ... rest of your component code
-import { useState } from "react";
-
 interface PermissionItem {
   id: string;
   key: string;
