@@ -7,7 +7,6 @@ import { useState, useEffect } from "react";
 // ... rest of your component code
 
 import React, { Suspense } from "react";
-export const dynamic = "force-dynamic";
 
 import IncidentReportsClient from "./IncidentReportsClient";
 
