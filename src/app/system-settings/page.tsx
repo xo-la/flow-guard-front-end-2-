@@ -1,5 +1,12 @@
 "use client";
 
+
+// FORCE DYNAMIC RENDERING TO PREVENT BUILD ERRORS
+export const dynamic = "force-dynamic";
+
+import { useState, useEffect } from "react";
+// ... rest of your component code
+
 import { useState } from "react";
 
 export default function SystemSettingsPage() {
