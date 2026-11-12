@@ -1,5 +1,10 @@
 "use client";
 
+"use client";
+
+// FORCE DYNAMIC RENDERING TO PREVENT STATIC EXPORT PRERENDER ERRORS
+export const dynamic = "force-dynamic";
+
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { API_BASE_URL } from "../../config/api";
