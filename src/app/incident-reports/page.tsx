@@ -7,9 +7,7 @@ import { useState, useEffect } from "react";
 // ... rest of your component code
 
 import React, { Suspense } from "react";
-
 import IncidentReportsClient from "./IncidentReportsClient";
-
 export default function IncidentReportsPage() {
   return (
     <Suspense fallback={<div className="h-full" /> }>
