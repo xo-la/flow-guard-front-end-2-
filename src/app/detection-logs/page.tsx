@@ -1,3 +1,10 @@
+"use client";
+
+export const dynamic = "force-dynamic";
+
+import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
+
 import React, { Suspense } from "react";
 export const dynamic = "force-dynamic"; // Ensures the page is always rendered on the server for real-time data 
 
