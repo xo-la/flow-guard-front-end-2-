@@ -1,7 +1,5 @@
 "use client";
 
-"use client";
-
 // FORCE DYNAMIC RENDERING TO PREVENT STATIC EXPORT PRERENDER ERRORS
 export const dynamic = "force-dynamic";
 
