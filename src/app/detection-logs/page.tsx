@@ -6,7 +6,6 @@ import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 
 import React, { Suspense } from "react";
-
 import DetectionLogsClient from "./DetectionLogsClient";
 
 interface LogEntry {
