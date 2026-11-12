@@ -7,8 +7,6 @@ export const dynamic = "force-dynamic";
 import { useState, useEffect } from "react";
 // ... rest of your component code
 
-import { useState } from "react";
-
 export default function SystemSettingsPage() {
   // Section 1 State: AI Thresholds Calibration parameters
   const [confidence, setConfidence] = useState<number>(85);
